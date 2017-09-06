@@ -5,6 +5,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.view.KeyEvent;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
@@ -19,26 +21,23 @@ public class WebViewActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         getSupportActionBar().setHomeButtonEnabled(true); //设置返回键可用
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
         Intent intent=getIntent();
         String title=intent.getStringExtra("title");
         getSupportActionBar().setTitle(title);
         String new_url=intent.getStringExtra("url");
         wv = (WebView) findViewById(R.id.webview);
-        TextView tv= (TextView) findViewById( R.id.title);
-        tv.setText(title);
-//
-//        webView.setWebViewClient(new WebViewClient(){
-//            @Override
-//            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-//                wv=view;
-//                view.getSettings().setJavaScriptEnabled(true);
-//                view.loadUrl(url);
-//
-//                return true;
-//            }
-//        });
-        wv.loadDataWithBaseURL(null,new_url,"text/html","utf-8",null);
+        wv.setWebViewClient(new WebViewClient(){
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                    wv=view;
+                    view.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+                    view.getSettings().setJavaScriptEnabled(true);
+                return false;
+            }
+
+
+        });
+        wv.loadUrl(new_url);
     }
 
     @Override

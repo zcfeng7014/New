@@ -17,13 +17,22 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.cfeng.anew.MyApp;
 import com.cfeng.anew.R;
+import com.cfeng.anew.Utils.NewsRequestUtils;
 import com.cfeng.anew.WebViewActivity;
 import com.cfeng.anew.bean.NewBean;
 import com.handmark.pulltorefresh.library.PullToRefreshBase;
 import com.handmark.pulltorefresh.library.PullToRefreshListView;
 import com.squareup.picasso.Picasso;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.w3c.dom.Text;
 
 import java.util.ArrayList;
@@ -36,12 +45,24 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 
-public abstract class BaseFragment extends Fragment {
+public class BaseFragment extends Fragment {
     Handler handler=new Handler();
     private ArrayList<NewBean> datalist=new ArrayList<>();
+    private String type;
+    private int page=0;
+    private int page_size=40;
+
+    public static BaseFragment  getInstance(String txt) {
+
+        BaseFragment baseFragment=new BaseFragment();
+        baseFragment.type=txt;
+    return baseFragment;
+    }
     public BaseFragment() {
         // Required empty public constructor
+
     }
+
     BaseAdapter ba=new BaseAdapter() {
         @Override
         public int getCount() {
@@ -64,25 +85,16 @@ public abstract class BaseFragment extends Fragment {
                 convertView= (LinearLayout) getLayoutInflater(getArguments()).inflate(R.layout.newitem,null);
             }
             LinearLayout ll= (LinearLayout) convertView;
-            LinearLayout a= (LinearLayout) ll.findViewById(R.id.img_list);
-            a.removeAllViews();
-            if (!datalist.get(position).getImgurl().isEmpty()) {
-                ImageView iv=new ImageView(getContext());
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                params.width=0;
-                params.weight=1;
-                iv.setLayoutParams(params);
-                a.addView(iv);
-                Picasso.with(getContext()).load(datalist.get(position).getImgurl()).resize(1080,640).centerCrop().into(iv);
-            }
             TextView tv= (TextView) ll.findViewById(R.id.title);
             TextView bv= (TextView) ll.findViewById(R.id.bottom);
-            TextView dv=(TextView) ll.findViewById(R.id.dist);
+            ImageView iv= (ImageView) ll.findViewById(R.id.pic);
             tv.setText(datalist.get(position).getTitle());
-            dv.setText(datalist.get(position).getDigest());
-            bv.setText("来源："+datalist.get(position).getSource()+"   时间："+datalist.get(position).getTime());
-
+            bv.setText(datalist.get(position).getTime()+"  "+datalist.get(position).getSrc());
+            if (datalist.get(position).getPic().isEmpty()){
+                Picasso.with(getContext()).load(R.drawable.sina).fit().into(iv);
+            }
+            else
+                Picasso.with(getContext()).load(datalist.get(position).getPic()).fit().into(iv);
             return ll;
         }
     };
@@ -178,7 +190,7 @@ public abstract class BaseFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Intent intent=new Intent(getActivity(),WebViewActivity.class);
-                intent.putExtra("url",datalist.get(position-1).getContent());
+                intent.putExtra("url",datalist.get(position-1).getUrl());
                 intent.putExtra("title",datalist.get(position-1).getTitle());
                 startActivity(intent);
             }
@@ -186,7 +198,15 @@ public abstract class BaseFragment extends Fragment {
         return fl;
     }
 
-    public abstract void loadmore(ObservableEmitter<NewBean> e);
+    public void loadmore(final ObservableEmitter<NewBean> e) {
+        page++;
+        MyApp app= (MyApp) getActivity().getApplication();
+        app.requestQueue.add(NewsRequestUtils.get(type,page_size,page_size*page,e));
+    }
 
-    public abstract  void update_data(ObservableEmitter<NewBean> e);
+    public void update_data(final ObservableEmitter<NewBean> e) {
+        page=0;
+        MyApp app= (MyApp) getActivity().getApplication();
+        app.requestQueue.add(NewsRequestUtils.get(type,page_size,0,e));
+    }
 }

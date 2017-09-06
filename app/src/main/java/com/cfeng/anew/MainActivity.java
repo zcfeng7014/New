@@ -8,51 +8,84 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 
-import com.cfeng.anew.fragment.CarFragment;
-import com.cfeng.anew.fragment.EntFragment;
-import com.cfeng.anew.fragment.JokeFragment;
-import com.cfeng.anew.fragment.MoneyFragment;
-import com.cfeng.anew.fragment.SportFragment;
-import com.cfeng.anew.fragment.TechFragment;
-import com.cfeng.anew.fragment.TopFragment;
-import com.cfeng.anew.fragment.WarFragment;
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.cfeng.anew.Base.BaseFragment;
+import com.cfeng.anew.Utils.NewsRequestUtils;
+import com.cfeng.anew.bean.NewBean;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+import io.reactivex.ObservableEmitter;
 
 public class MainActivity extends AppCompatActivity {
-    private String[] mTitles = new String[]{"头条", "娱乐","军事","汽车","财经","笑话","体育","科技"};
+    private   ArrayList<String> mTitles =new ArrayList<>();
     ArrayList<Fragment> list=new ArrayList<>();
+    ViewPager vp;
+    TabLayout tableLayout;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        ViewPager vp= (ViewPager) findViewById(R.id.vp);
-        TabLayout tableLayout= (TabLayout) findViewById(R.id.nav);
-            list.add(new TopFragment());
-            list.add(new EntFragment());
-            list.add(new WarFragment());
-            list.add(new CarFragment());
-            list.add(new MoneyFragment());
-            list.add(new JokeFragment());
-            list.add(new SportFragment());
-            list.add(new TechFragment());
-        vp.setAdapter(new FragmentPagerAdapter(getSupportFragmentManager()) {
+        vp= (ViewPager) findViewById(R.id.vp);
+        tableLayout= (TabLayout) findViewById(R.id.nav);
+        MyApp app= (MyApp) getApplication();
+        app.requestQueue.add(new JsonObjectRequest(Request.Method.GET, WebConfig.getchannel, null, new Response.Listener<JSONObject>() {
             @Override
-            public Fragment getItem(int position) {
-                return list.get(position);
+            public void onResponse(JSONObject jsonObject) {
+                System.out.println(jsonObject.toString());
+                try {
+                    JSONArray array=jsonObject.getJSONArray("result");
+                    for (int i=0;i<array.length();i++){
+                        mTitles.add(array.getString(i));
+                        list.add(BaseFragment.getInstance(array.getString(i)));
+                    }
+                    vp.setAdapter(new FragmentPagerAdapter(getSupportFragmentManager()) {
+                        @Override
+                        public Fragment getItem(int position) {
+                            return list.get(position);
+                        }
+
+                        @Override
+                        public int getCount() {
+                            return list.size();
+                        }
+                        @Override
+                        public CharSequence getPageTitle(int position) {
+                            return mTitles.get(position) ;
+                        }
+                    });
+                    tableLayout.setupWithViewPager(vp);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
             }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError volleyError) {
+
+            }
+        }) {
 
             @Override
-            public int getCount() {
-                return list.size();
-            }
-            @Override
-            public CharSequence getPageTitle(int position) {
-                return mTitles[position];
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                HashMap<String, String> headers = new HashMap<String, String>();
+                headers.put("Authorization", "APPCODE " + WebConfig.AppCode);
+                return headers;
             }
         });
-        tableLayout.setupWithViewPager(vp);
+
     }
 }
